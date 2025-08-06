@@ -1,0 +1,68 @@
+services:
+  # FastAPI Backend Service
+  - type: web
+    name: vqa-smartdoc-api
+    runtime: docker
+    repo: https://github.com/yourusername/vqa-smartdoc.git # Replace with your GitHub repo URL
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    region: oregon # or singapore, frankfurt, etc.
+    plan: starter # free tier, upgrade to starter+ for production
+    branch: main
+    
+    # Auto-deploy on git push
+    autoDeploy: true
+    
+    # Environment variables (set these in Render dashboard)
+    envVars:
+      - key: AWS_ACCESS_KEY_ID
+        sync: false # Set manually in Render dashboard for security
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false # Set manually in Render dashboard for security
+      - key: AWS_REGION
+        value: us-east-1
+      - key: S3_BUCKET_NAME
+        sync: false # Set manually in Render dashboard
+      - key: HUGGINGFACE_API_TOKEN
+        sync: false # Set manually in Render dashboard for security
+      - key: HF_MODEL_URL
+        value: https://api-inference.huggingface.co/models/Salesforce/blip-vqa-base
+      - key: MAX_FILE_SIZE_MB
+        value: "10"
+      - key: SUPPORTED_EXTENSIONS
+        value: "pdf,png,jpg,jpeg,gif,webp"
+      - key: CORS_ORIGINS
+        value: "https://your-frontend-domain.onrender.com,http://localhost:3000,https://localhost:3000"
+      - key: API_HOST
+        value: "0.0.0.0"
+      - key: API_PORT
+        value: "8000"
+      - key: ENVIRONMENT
+        value: "production"
+      - key: LOG_LEVEL
+        value: "info"
+    
+    # Health check endpoint
+    healthCheckPath: /health
+    
+    # Build and deployment settings
+    buildFilter:
+      paths:
+        - backend/**
+        - .github/**
+    
+    # Startup command override (optional)
+    # startCommand: "uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2"
+
+# Optional: Database service (if needed in future)
+# - type: pserv
+#   name: vqa-smartdoc-db
+#   runtime: postgresql
+#   plan: starter
+#   databaseName: vqa_smartdoc
+#   databaseUser: vqa_user
+
+# Optional: Redis service (for caching)
+# - type: redis
+#   name: vqa-smartdoc-redis
+#   plan: starter

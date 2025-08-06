@@ -1,0 +1,128 @@
+# Backend-specific .gitignore
+
+# ========================================
+# SENSITIVE DATA & SECRETS
+# ========================================
+# Environment files - CRITICAL: Never commit these!
+.env
+.env.local
+.env.production
+.env.development
+.env.staging
+*.env
+
+# AWS credentials and config
+.aws/
+aws-credentials.json
+credentials.json
+
+# API keys and secrets
+api-keys.txt
+secrets.json
+config.json
+huggingface-token.txt
+
+# ========================================
+# PYTHON SPECIFIC
+# ========================================
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+.python-version
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Testing
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
+
+# FastAPI / Uvicorn
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ========================================
+# UPLOADS & DATA
+# ========================================
+# Upload directories
+uploads/
+temp/
+tmp/
+*.tmp
+*.temp
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# ========================================
+# LOGS & RUNTIME
+# ========================================
+# Log files
+logs/
+*.log
+debug.log
+error.log
+access.log
+combined.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ========================================
+# DOCKER & DEPLOYMENT
+# ========================================
+# Docker override files
+docker-compose.override.yml
+.dockerignore.bak
+
+# ========================================
+# DEVELOPMENT & BACKUP
+# ========================================
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Test files
+test_*.py.bak
+*_test.py.bak

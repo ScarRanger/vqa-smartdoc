@@ -1,6 +1,39 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# ========================================
+# SENSITIVE DATA & SECRETS
+# ========================================
+# Environment files - NEVER commit these!
+.env
+.env.local
+.env.production
+.env.development
+.env.staging
+.env.test
+*.env
+**/.env*
+
+# AWS credentials
+.aws/
+aws-credentials.json
+credentials.json
+
+# API keys and tokens
+api-keys.txt
+secrets.json
+config.json
+
+# SSH keys
+*.pem
+*.key
+id_rsa*
+*.p12
+*.pfx
+
+# ========================================
+# NODE.JS / FRONTEND
+# ========================================
+# Dependencies
 /node_modules
 /.pnp
 .pnp.*
@@ -10,32 +43,294 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# Package manager files
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+package-lock.json.bak
+yarn.lock.bak
 
-# env files (can opt-in for committing if needed)
-.env*
+# Testing
+/coverage
+/test-results
+/.nyc_output
 
-# vercel
+# Next.js
+/.next/
+/out/
+.next
+
+# Production builds
+/build
+/dist
+/.nuxt
+/.output
+/.vite
+
+# Vercel
 .vercel
 
-# typescript
+# TypeScript
 *.tsbuildinfo
 next-env.d.ts
+.tsc-cache/
+
+# ========================================
+# PYTHON / BACKEND
+# ========================================
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+.python-version
+.pyenv
+backend/.venv/
+backend/venv/
+backend/env/
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# FastAPI specific
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ========================================
+# DATABASES
+# ========================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# PostgreSQL
+*.sql.gz
+pg_hba.conf
+postgresql.conf
+
+# Redis
+dump.rdb
+
+# ========================================
+# SYSTEM & EDITOR FILES
+# ========================================
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# IDEs & Editors
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+.history/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+Session.vim
+.netrwhist
+
+# ========================================
+# UPLOADS & MEDIA FILES
+# ========================================
+# Local uploads directory
+/uploads/
+/backend/uploads/
+/tmp/
+/temp/
+*.tmp
+*.temp
+
+# Large media files (uncomment if needed)
+# *.mp4
+# *.avi
+# *.mov
+# *.wmv
+# *.flv
+# *.webm
+# *.mkv
+
+# ========================================
+# LOGS & MONITORING
+# ========================================
+# Log files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+debug.log
+error.log
+access.log
+combined.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# ========================================
+# DEPLOYMENT & CI/CD
+# ========================================
+# Docker
+.dockerignore.bak
+docker-compose.override.yml
+*.dockerfile.bak
+
+# GitHub Actions (keep workflow files but ignore secrets)
+.github/secrets/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfvars
+*.tfvars
+
+# Kubernetes
+*.kubeconfig
+kube-config
+
+# Helm
+charts/*/charts/
+charts/*/requirements.lock
+
+# ========================================
+# BACKUP & TEMPORARY FILES
+# ========================================
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+*~
+.#*
+\#*#
+
+# Archive files
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# ========================================
+# SPECIFIC PROJECT EXCLUSIONS
+# ========================================
+# Test files and data
+test-file.txt
+sample-data/
+test-uploads/
+
+# Generated documentation
+docs/build/
+site/
+
+# Misc
+.vscode/launch.json
+.vscode/settings.json
