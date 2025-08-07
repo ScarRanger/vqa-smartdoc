@@ -1,15 +1,16 @@
 """
 VQA SmartDoc FastAPI Backend
-Complete implementation with S3 upload and HuggingFace VQA endpoints
+Complete implementation with Cloudinary upload and HuggingFace VQA endpoints
 """
 
 import os
 import uuid
 import logging
+import time
 from typing import Optional
-import boto3
+import cloudinary
+import cloudinary.uploader
 import requests
-from botocore.exceptions import ClientError, NoCredentialsError
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI app
 app = FastAPI(
     title="VQA SmartDoc API",
-    description="Visual Question Answering API with S3 file upload and HuggingFace BLIP VQA",
+    description="Visual Question Answering API with Cloudinary upload and HuggingFace BLIP VQA",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
@@ -36,8 +37,7 @@ app.add_middleware(
         "http://localhost:3001",
         "https://*.vercel.app",
         "https://vercel.app",
-        "https://*.netlify.app",
-        "*"  # For development - restrict in production
+        "https://*.netlify.app" # For development - restrict in production
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -45,10 +45,9 @@ app.add_middleware(
 )
 
 # Configuration from environment variables
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
-S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
+CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
+CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
 
 HUGGINGFACE_API_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
 HUGGINGFACE_MODEL_URL = "https://api-inference.huggingface.co/models/Salesforce/blip-vqa-base"
@@ -57,24 +56,25 @@ HUGGINGFACE_MODEL_URL = "https://api-inference.huggingface.co/models/Salesforce/
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".pdf", ".webp"}
 
-# Initialize S3 client
-def get_s3_client():
-    """Initialize S3 client with error handling"""
-    if not all([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_BUCKET_NAME]):
+# Initialize Cloudinary
+def init_cloudinary():
+    """Initialize Cloudinary with error handling"""
+    if not all([CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET]):
         raise HTTPException(
             status_code=500,
-            detail="AWS S3 not configured. Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and S3_BUCKET_NAME environment variables."
+            detail="Cloudinary not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables."
         )
     
     try:
-        return boto3.client(
-            's3',
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-            region_name=AWS_REGION
+        cloudinary.config(
+            cloud_name=CLOUDINARY_CLOUD_NAME,
+            api_key=CLOUDINARY_API_KEY,
+            api_secret=CLOUDINARY_API_SECRET,
+            secure=True
         )
+        return True
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to initialize S3 client: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to initialize Cloudinary: {str(e)}")
 
 # Pydantic Models
 class UploadResponse(BaseModel):
@@ -92,7 +92,7 @@ class VQARequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "file_url": "https://bucket.s3.amazonaws.com/uploads/image.jpg",
+                "file_url": "https://res.cloudinary.com/your-cloud/image/upload/v1234567890/vqa-smartdoc/sample.jpg",
                 "question": "What is shown in this image?"
             }
         }
@@ -123,40 +123,41 @@ def validate_file(file: UploadFile) -> tuple[bool, str]:
     
     return True, "Valid file"
 
-def generate_s3_key(filename: str) -> str:
-    """Generate unique S3 key for file"""
+def generate_cloudinary_public_id(filename: str) -> str:
+    """Generate unique public ID for Cloudinary"""
     file_ext = os.path.splitext(filename)[1].lower()
     unique_id = str(uuid.uuid4())
-    return f"uploads/{unique_id}{file_ext}"
+    return f"vqa-smartdoc/{unique_id}"
 
-def upload_to_s3(file_content: bytes, s3_key: str, content_type: str) -> str:
-    """Upload file to S3 and return public URL"""
-    s3_client = get_s3_client()
+def upload_to_cloudinary(file_content: bytes, filename: str) -> str:
+    """Upload file to Cloudinary and return public URL"""
+    init_cloudinary()
     
     try:
-        # Upload file to S3
-        s3_client.put_object(
-            Bucket=S3_BUCKET_NAME,
-            Key=s3_key,
-            Body=file_content,
-            ContentType=content_type,
-            ACL='public-read'  # Make file publicly accessible
+        # Generate unique public ID
+        public_id = generate_cloudinary_public_id(filename)
+        
+        # Upload to Cloudinary
+        upload_result = cloudinary.uploader.upload(
+            file_content,
+            public_id=public_id,
+            resource_type="auto",  # Automatically detect file type
+            format="auto",        # Auto-optimize format
+            quality="auto",       # Auto-optimize quality
+            fetch_format="auto"   # Auto-deliver best format
         )
         
-        # Generate public URL
-        public_url = f"https://{S3_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{s3_key}"
+        # Return the secure URL
+        public_url = upload_result.get('secure_url')
+        if not public_url:
+            raise HTTPException(status_code=500, detail="Failed to get Cloudinary URL from upload result")
+        
+        logger.info(f"File uploaded to Cloudinary: {filename} -> {public_url}")
         return public_url
         
-    except ClientError as e:
-        error_code = e.response.get('Error', {}).get('Code', 'Unknown')
-        if error_code == 'NoSuchBucket':
-            raise HTTPException(status_code=500, detail=f"S3 bucket '{S3_BUCKET_NAME}' does not exist")
-        elif error_code == 'AccessDenied':
-            raise HTTPException(status_code=500, detail="Access denied. Check AWS credentials and bucket permissions")
-        else:
-            raise HTTPException(status_code=500, detail=f"S3 upload failed: {str(e)}")
-    except NoCredentialsError:
-        raise HTTPException(status_code=500, detail="AWS credentials not found")
+    except Exception as e:
+        logger.error(f"Cloudinary upload error: {e}")
+        raise HTTPException(status_code=500, detail=f"Cloudinary upload failed: {str(e)}")
 
 def query_huggingface_vqa(image_url: str, question: str) -> dict:
     """Query HuggingFace Inference API for VQA"""
@@ -237,7 +238,7 @@ async def health_check():
         "version": "1.0.0",
         "endpoints": ["/upload/", "/ask/", "/health"],
         "configuration": {
-            "s3_configured": bool(AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and S3_BUCKET_NAME),
+            "cloudinary_configured": bool(CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET),
             "huggingface_configured": bool(HUGGINGFACE_API_TOKEN),
             "max_file_size_mb": MAX_FILE_SIZE / (1024 * 1024),
             "allowed_extensions": list(ALLOWED_EXTENSIONS)
@@ -247,7 +248,7 @@ async def health_check():
 @app.post("/upload/", response_model=UploadResponse)
 async def upload_file(file: UploadFile = File(...)):
     """
-    Upload a file to AWS S3 and return the public URL
+    Upload a file to Cloudinary and return the public URL
     
     - **file**: The file to upload (Images: JPG, PNG, GIF, WEBP; Documents: PDF)
     - **Returns**: Upload response with file URL, name, size, and upload ID
@@ -271,21 +272,15 @@ async def upload_file(file: UploadFile = File(...)):
         if not file_content:
             raise HTTPException(status_code=400, detail="Empty file provided")
         
-        # Generate S3 key and upload
-        s3_key = generate_s3_key(file.filename)
+        # Upload to Cloudinary
         upload_id = str(uuid.uuid4())
-        
-        public_url = upload_to_s3(
-            file_content, 
-            s3_key, 
-            file.content_type or 'application/octet-stream'
-        )
+        public_url = upload_to_cloudinary(file_content, file.filename)
         
         logger.info(f"File uploaded successfully: {file.filename} -> {public_url}")
         
         return UploadResponse(
             success=True,
-            message="File uploaded successfully",
+            message="File uploaded successfully to Cloudinary",
             file_url=public_url,
             file_name=file.filename,
             file_size=len(file_content),
@@ -349,20 +344,24 @@ async def ask_question(request: VQARequest):
 @app.get("/health")
 async def detailed_health_check():
     """Detailed health check with service status"""
-    s3_configured = bool(AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and S3_BUCKET_NAME)
+    cloudinary_configured = bool(CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET)
     hf_configured = bool(HUGGINGFACE_API_TOKEN)
     
-    # Test S3 connection
-    s3_status = "unknown"
-    if s3_configured:
+    # Test Cloudinary connection
+    cloudinary_status = "unknown"
+    if cloudinary_configured:
         try:
-            s3_client = get_s3_client()
-            s3_client.head_bucket(Bucket=S3_BUCKET_NAME)
-            s3_status = "accessible"
+            init_cloudinary()
+            # Test Cloudinary by checking config
+            config = cloudinary.config()
+            if config.cloud_name:
+                cloudinary_status = "accessible"
+            else:
+                cloudinary_status = "config_error"
         except Exception as e:
-            s3_status = f"error: {str(e)}"
+            cloudinary_status = f"error: {str(e)}"
     else:
-        s3_status = "not_configured"
+        cloudinary_status = "not_configured"
     
     # Test HuggingFace connection
     hf_status = "unknown"
@@ -383,11 +382,11 @@ async def detailed_health_check():
         "status": "healthy",
         "timestamp": time.time(),
         "services": {
-            "s3": {
-                "configured": s3_configured,
-                "status": s3_status,
-                "bucket": S3_BUCKET_NAME,
-                "region": AWS_REGION
+            "cloudinary": {
+                "configured": cloudinary_configured,
+                "status": cloudinary_status,
+                "cloud_name": CLOUDINARY_CLOUD_NAME,
+                "features": ["auto_optimization", "auto_format", "secure_delivery"]
             },
             "huggingface": {
                 "configured": hf_configured,
@@ -413,14 +412,13 @@ async def validation_exception_handler(request, exc):
 
 if __name__ == "__main__":
     import uvicorn
-    import time
     
     logger.info("Starting VQA SmartDoc API server...")
     
     # Check configuration on startup
     config_issues = []
-    if not all([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_BUCKET_NAME]):
-        config_issues.append("AWS S3 not configured")
+    if not all([CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET]):
+        config_issues.append("Cloudinary not configured")
     if not HUGGINGFACE_API_TOKEN:
         config_issues.append("HuggingFace API token not configured")
     
