@@ -1,5 +1,5 @@
-# Use Python 3.11 slim base image for optimal size and performance
-FROM python:3.11-slim
+# Use Python 3.10 slim base image for stability and broad compatibility
+FROM python:3.10-slim
 
 # Set environment variables for Python optimization and security
 ENV PYTHONDONTWRITEBYTECODE=1 \
