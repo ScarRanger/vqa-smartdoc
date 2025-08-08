@@ -1,4 +1,7 @@
 import axios, { AxiosError } from 'axios';
+
+// Minimal FastAPI error response shape
+type FastApiError = { detail?: string; message?: string; error?: string; details?: string } | string;
 import { config, debugLog, errorLog, isDevelopment } from '@/lib/config';
 
 // API Configuration from config
@@ -128,15 +131,14 @@ export async function uploadFile(file: File): Promise<UploadResponse> {
     return result;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError<UploadResponse>;
-      
+      const axiosError = error as AxiosError<FastApiError>;
+
       if (axiosError.response?.data) {
-        // Server responded with an error
-        const apiError: ApiError = {
-          message: axiosError.response.data.message || 'Upload failed',
-          status: axiosError.response.status,
-          details: axiosError.response.statusText,
-        };
+        // FastAPI typically returns { detail: string }
+  const data = axiosError.response.data;
+  const message = (typeof data === 'string' ? data : data.message || data.detail || data.error) || 'Upload failed';
+  const details = typeof data === 'string' ? data : data.details || axiosError.response.statusText || '';
+        const apiError: ApiError = { message, status: axiosError.response.status, details };
         throw apiError;
       } else if (axiosError.request) {
         // Request was made but no response received
@@ -197,15 +199,13 @@ export async function askQuestion(fileUrl: string, question: string): Promise<As
     return result;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError<AskResponse>;
-      
+      const axiosError = error as AxiosError<FastApiError>;
+
       if (axiosError.response?.data) {
-        // Server responded with an error
-        const apiError: ApiError = {
-          message: axiosError.response.data.message || 'Failed to get answer',
-          status: axiosError.response.status,
-          details: axiosError.response.statusText,
-        };
+  const data = axiosError.response.data;
+  const message = (typeof data === 'string' ? data : data.message || data.detail || data.error) || 'Failed to get answer';
+  const details = typeof data === 'string' ? data : data.details || axiosError.response.statusText || '';
+        const apiError: ApiError = { message, status: axiosError.response.status, details };
         throw apiError;
       } else if (axiosError.request) {
         // Request was made but no response received
