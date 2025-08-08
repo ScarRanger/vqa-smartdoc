@@ -2,30 +2,12 @@
   "version": 2,
   "name": "vqa-smartdoc",
   "routes": [
-    {
-      "src": "/api/backend/(.*)",
-      "dest": "https://vqa-smartdoc-api.onrender.com/$1",
-      "headers": {
-        "Cache-Control": "no-cache"
-      }
-    },
-    {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
+    { "src": "/proxy/(.*)", "dest": "https://vqa-smartdoc-api.onrender.com/$1" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/$1" }
   ],
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://vqa-smartdoc-api.onrender.com",
     "NEXT_PUBLIC_APP_ENV": "production"
-  },
-  "build": {
-    "env": {
-      "NEXT_PUBLIC_API_URL": "https://vqa-smartdoc-api.onrender.com",
-      "NEXT_PUBLIC_APP_ENV": "production"
-    }
   },
   "functions": {
     "app/api/**": {

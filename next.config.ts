@@ -48,12 +48,12 @@ const nextConfig: NextConfig = {
     ];
   },
   
-  // Rewrites for API proxy (dev and prod)
+  // Rewrites for API proxy (dev and prod). Use /proxy to avoid Next's reserved /api namespace.
   async rewrites() {
     const target = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     return [
       {
-        source: '/api/backend/:path*',
+        source: '/proxy/:path*',
         destination: `${target}/:path*`,
       },
     ];

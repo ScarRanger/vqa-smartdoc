@@ -8,7 +8,7 @@
 // - In production, default to same-origin proxy path to use Next.js rewrite
 const resolvedApiBaseUrl = (() => {
   // In production, ALWAYS use the same-origin proxy path to avoid CORS/stale URLs
-  if (process.env.NODE_ENV === 'production') return '/api/backend';
+  if (process.env.NODE_ENV === 'production') return '/proxy';
   // In development, allow explicit override; else default to local backend
   const explicit = process.env.NEXT_PUBLIC_API_URL;
   if (explicit && explicit.trim().length > 0) return explicit.trim();
