@@ -301,6 +301,11 @@ async def upload_file(file: UploadFile = File(...)):
         logger.error(f"Upload error: {e}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
+# Alias without trailing slash to handle proxies/rewrites that strip it
+@app.post("/upload", response_model=UploadResponse)
+async def upload_file_no_slash(file: UploadFile = File(...)):
+    return await upload_file(file)
+
 @app.post("/ask/", response_model=VQAResponse)
 async def ask_question(request: VQARequest):
     """
@@ -348,6 +353,11 @@ async def ask_question(request: VQARequest):
     except Exception as e:
         logger.error(f"VQA processing error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to process question: {str(e)}")
+
+# Alias without trailing slash
+@app.post("/ask", response_model=VQAResponse)
+async def ask_question_no_slash(request: VQARequest):
+    return await ask_question(request)
 
 @app.get("/health")
 async def detailed_health_check():
