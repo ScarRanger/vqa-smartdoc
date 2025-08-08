@@ -84,6 +84,11 @@ def init_cloudinary():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to initialize Cloudinary: {str(e)}")
 
+# Helpers
+def to_camel(string: str) -> str:
+    parts = string.split('_')
+    return parts[0] + ''.join(word.capitalize() for word in parts[1:])
+
 # Pydantic Models
 class UploadResponse(BaseModel):
     success: bool
@@ -93,11 +98,17 @@ class UploadResponse(BaseModel):
     file_size: int
     upload_id: str
 
+    class Config:
+        alias_generator = to_camel
+        allow_population_by_field_name = True
+
 class VQARequest(BaseModel):
     file_url: HttpUrl
     question: str
     
     class Config:
+        alias_generator = to_camel
+        allow_population_by_field_name = True
         schema_extra = {
             "example": {
                 "file_url": "https://res.cloudinary.com/your-cloud/image/upload/v1234567890/vqa-smartdoc/sample.jpg",
@@ -112,6 +123,10 @@ class VQAResponse(BaseModel):
     file_url: str
     question: str
     processing_time: Optional[float] = None
+
+    class Config:
+        alias_generator = to_camel
+        allow_population_by_field_name = True
 
 class ErrorResponse(BaseModel):
     success: bool
@@ -283,8 +298,8 @@ async def upload_file(file: UploadFile = File(...)):
         public_url = upload_to_cloudinary(file_content, file.filename)
         
         logger.info(f"File uploaded successfully: {file.filename} -> {public_url}")
-        
-        return UploadResponse(
+
+        resp = UploadResponse(
             success=True,
             message="File uploaded successfully to Cloudinary",
             file_url=public_url,
@@ -292,6 +307,7 @@ async def upload_file(file: UploadFile = File(...)):
             file_size=len(file_content),
             upload_id=upload_id
         )
+        return resp.dict(by_alias=True)
         
     except HTTPException:
         raise
@@ -336,8 +352,8 @@ async def ask_question(request: VQARequest):
         processing_time = time.time() - start_time
         
         logger.info(f"VQA completed in {processing_time:.2f}s: '{request.question[:30]}...' -> '{answer[:30]}...'")
-        
-        return VQAResponse(
+
+        resp = VQAResponse(
             success=True,
             answer=answer,
             confidence=confidence,
@@ -345,6 +361,7 @@ async def ask_question(request: VQARequest):
             question=request.question,
             processing_time=processing_time
         )
+        return resp.dict(by_alias=True)
         
     except HTTPException:
         raise

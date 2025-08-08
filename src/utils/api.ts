@@ -1,7 +1,8 @@
 import axios, { AxiosError } from 'axios';
 
 // Minimal FastAPI error response shape
-type FastApiError = { detail?: string; message?: string; error?: string; details?: string } | string;
+type FastApiErrorDetail = { loc?: unknown[]; msg?: string; type?: string };
+type FastApiError = { detail?: string | FastApiErrorDetail[]; message?: string; error?: string; details?: string } | string;
 import { config, debugLog, errorLog, isDevelopment } from '@/lib/config';
 
 // API Configuration from config
@@ -135,9 +136,22 @@ export async function uploadFile(file: File): Promise<UploadResponse> {
 
       if (axiosError.response?.data) {
         // FastAPI typically returns { detail: string }
-  const data = axiosError.response.data;
-  const message = (typeof data === 'string' ? data : data.message || data.detail || data.error) || 'Upload failed';
-  const details = typeof data === 'string' ? data : data.details || axiosError.response.statusText || '';
+        const data = axiosError.response.data;
+        let message: string = 'Upload failed';
+        let details: string = '';
+        if (typeof data === 'string') {
+          message = data || message;
+          details = data;
+        } else if (data && typeof data === 'object') {
+          const obj = data as { detail?: unknown; message?: string; error?: string; details?: string };
+          if (Array.isArray(obj.detail) && obj.detail.length) {
+            const first = obj.detail[0] as FastApiErrorDetail;
+            message = first.msg || message;
+          } else {
+            message = obj.message || (typeof obj.detail === 'string' ? obj.detail : '') || obj.error || message;
+          }
+          details = obj.details || axiosError.response.statusText || '';
+        }
         const apiError: ApiError = { message, status: axiosError.response.status, details };
         throw apiError;
       } else if (axiosError.request) {
@@ -202,9 +216,22 @@ export async function askQuestion(fileUrl: string, question: string): Promise<As
       const axiosError = error as AxiosError<FastApiError>;
 
       if (axiosError.response?.data) {
-  const data = axiosError.response.data;
-  const message = (typeof data === 'string' ? data : data.message || data.detail || data.error) || 'Failed to get answer';
-  const details = typeof data === 'string' ? data : data.details || axiosError.response.statusText || '';
+        const data = axiosError.response.data;
+        let message: string = 'Failed to get answer';
+        let details: string = '';
+        if (typeof data === 'string') {
+          message = data || message;
+          details = data;
+        } else if (data && typeof data === 'object') {
+          const obj = data as { detail?: unknown; message?: string; error?: string; details?: string };
+          if (Array.isArray(obj.detail) && obj.detail.length) {
+            const first = obj.detail[0] as FastApiErrorDetail;
+            message = first.msg || message;
+          } else {
+            message = obj.message || (typeof obj.detail === 'string' ? obj.detail : '') || obj.error || message;
+          }
+          details = obj.details || axiosError.response.statusText || '';
+        }
         const apiError: ApiError = { message, status: axiosError.response.status, details };
         throw apiError;
       } else if (axiosError.request) {
