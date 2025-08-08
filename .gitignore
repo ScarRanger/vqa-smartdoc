@@ -336,3 +336,7 @@ site/
 .vscode/settings.json
 
 .vercel
+
+# Re-include frontend library code (was ignored by generic 'lib/' rule above)
+!src/lib/
+!src/lib/**
