@@ -2,7 +2,7 @@
   "version": 2,
   "name": "vqa-smartdoc",
   "routes": [
-    { "src": "/proxy/(.*)", "dest": "https://vqa-smartdoc-api.onrender.com/$1" },
+    { "src": "/proxy/(.*)", "dest": "https://vqa-smartdoc.onrender.com/$1" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/$1" }
   ],
