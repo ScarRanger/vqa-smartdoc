@@ -39,12 +39,13 @@ RUN mkdir -p uploads logs && \
 # Switch to non-root user
 USER appuser
 
-# Expose port (matches Railway/Render expectations)
+# Expose default platform port (Render typically uses 10000; informational only)
 EXPOSE 8000
 
 # Health check for container orchestration platforms
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Run the application with production settings
-CMD ["uvicorn", "vqa_api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--access-log", "--log-level", "info"]
+# Run the application with production settings and platform port
+# Use shell form to expand env vars at runtime
+CMD ["sh", "-c", "uvicorn vqa_api:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${WORKERS:-1} --access-log --log-level ${LOG_LEVEL:-info}"]
