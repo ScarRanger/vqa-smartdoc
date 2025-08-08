@@ -59,6 +59,7 @@ CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
 
 HUGGINGFACE_API_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
 HUGGINGFACE_MODEL_URL = "https://api-inference.huggingface.co/models/Salesforce/blip-vqa-base"
+HUGGINGFACE_PIPELINE_URL = "https://api-inference.huggingface.co/pipeline/visual-question-answering"
 
 # File upload configuration
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -190,40 +191,62 @@ def query_huggingface_vqa(image_url: str, question: str) -> dict:
     
     headers = {
         "Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "x-wait-for-model": "true",
     }
-    
-    payload = {
+
+    primary_payload = {
         "inputs": {
             "image": image_url,
-            "question": question
+            "question": question,
         }
     }
-    
+
     try:
-        logger.info(f"Sending VQA request: {question[:50]}...")
-        response = requests.post(HUGGINGFACE_MODEL_URL, headers=headers, json=payload, timeout=30)
-        
+        logger.info(f"Sending VQA request to model endpoint: {question[:50]}...")
+        response = requests.post(HUGGINGFACE_MODEL_URL, headers=headers, json=primary_payload, timeout=60)
+
         if response.status_code == 200:
             return response.json()
-        elif response.status_code == 503:
-            raise HTTPException(
-                status_code=503,
-                detail="Model is loading, please try again in a few moments"
-            )
-        elif response.status_code == 401:
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid HuggingFace API token"
-            )
-        else:
-            error_msg = f"HuggingFace API error: {response.status_code}"
-            try:
-                error_detail = response.json().get('error', response.text)
-                error_msg += f" - {error_detail}"
-            except:
-                error_msg += f" - {response.text}"
-            raise HTTPException(status_code=response.status_code, detail=error_msg)
+
+        # If we get 404/400, retry against the pipeline endpoint with an alternate payload format
+        if response.status_code in (400, 404):
+            alt_payload = {
+                "inputs": {
+                    "question": question,
+                    "image": image_url,
+                }
+            }
+            logger.info("Model endpoint returned %s; retrying via pipeline endpoint", response.status_code)
+            retry = requests.post(HUGGINGFACE_PIPELINE_URL, headers=headers, json=alt_payload, timeout=60)
+            if retry.status_code == 200:
+                return retry.json()
+            # Some pipelines expect list form
+            if retry.status_code in (400, 404):
+                list_payload = {"inputs": [{"image": image_url, "question": question}]}
+                logger.info("Retrying pipeline with list payload format")
+                retry2 = requests.post(HUGGINGFACE_PIPELINE_URL, headers=headers, json=list_payload, timeout=60)
+                if retry2.status_code == 200:
+                    return retry2.json()
+                response = retry2  # fallthrough to error handling
+            else:
+                response = retry
+
+        if response.status_code == 503:
+            raise HTTPException(status_code=503, detail="Model is loading, please try again in a few moments")
+        if response.status_code == 401:
+            raise HTTPException(status_code=401, detail="Invalid HuggingFace API token")
+
+        # Generic error handling with response text
+        error_msg = f"HuggingFace API error: {response.status_code}"
+        try:
+            j = response.json()
+            error_detail = j.get('error') or j.get('message') or response.text
+            error_msg += f" - {error_detail}"
+        except Exception:
+            error_msg += f" - {response.text}"
+        raise HTTPException(status_code=response.status_code, detail=error_msg)
             
     except requests.exceptions.Timeout:
         raise HTTPException(status_code=504, detail="Request timeout to HuggingFace API")
