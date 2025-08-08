@@ -28,20 +28,28 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS Configuration - Allow requests from localhost and Vercel
+# CORS Configuration
+# Note: Starlette/FASTAPI does not support wildcard strings in allow_origins.
+# Use allow_origin_regex for patterns like *.vercel.app and also include exact origins.
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN") or os.getenv("NEXT_PUBLIC_SITE_URL") or os.getenv("NEXT_PUBLIC_APP_URL")
+
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "https://vqa-smartdoc.vercel.app",  # exact production frontend
+]
+
+if FRONTEND_ORIGIN and FRONTEND_ORIGIN not in ALLOWED_ORIGINS:
+    ALLOWED_ORIGINS.append(FRONTEND_ORIGIN)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000", 
-        "http://localhost:3001",
-        "https://*.vercel.app",
-        "https://vercel.app",
-        "https://*.netlify.app" # For development - restrict in production
-    ],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
+    allow_headers=["*"]
 )
 
 # Configuration from environment variables
