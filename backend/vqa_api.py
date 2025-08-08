@@ -146,13 +146,11 @@ def upload_to_cloudinary(file_content: bytes, filename: str) -> str:
         public_id = generate_cloudinary_public_id(filename)
         
         # Upload to Cloudinary
+        # Upload original asset; delivery optimizations (f_auto,q_auto) are applied at URL time, not at upload time
         upload_result = cloudinary.uploader.upload(
             file_content,
             public_id=public_id,
-            resource_type="auto",  # Automatically detect file type
-            format="auto",        # Auto-optimize format
-            quality="auto",       # Auto-optimize quality
-            fetch_format="auto"   # Auto-deliver best format
+            resource_type="auto"  # Automatically detect resource type (image, raw, etc.)
         )
         
         # Return the secure URL
