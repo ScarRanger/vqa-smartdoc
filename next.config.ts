@@ -5,13 +5,7 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   
   // Optimize for production
-  swcMinify: true,
   compress: true,
-  
-  // Enable experimental features for better performance
-  experimental: {
-    optimizeCss: true,
-  },
   
   // Image optimization
   images: {
@@ -54,12 +48,13 @@ const nextConfig: NextConfig = {
     ];
   },
   
-  // Rewrites for API proxy in development
+  // Rewrites for API proxy (dev and prod)
   async rewrites() {
+    const target = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     return [
       {
         source: '/api/backend/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/:path*`,
+        destination: `${target}/:path*`,
       },
     ];
   },
