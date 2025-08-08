@@ -89,13 +89,14 @@ class VQARequest(BaseModel):
     file_url: HttpUrl
     question: str
     
-    class Config:
-        schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "file_url": "https://res.cloudinary.com/your-cloud/image/upload/v1234567890/vqa-smartdoc/sample.jpg",
                 "question": "What is shown in this image?"
             }
         }
+    }
 
 class VQAResponse(BaseModel):
     success: bool
